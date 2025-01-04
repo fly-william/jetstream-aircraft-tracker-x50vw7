@@ -1,0 +1,157 @@
+# Prometheus Alerting Rules Configuration v2.45.0
+# JetStream Platform Alert Definitions
+
+groups:
+- name: api_performance_alerts
+  rules:
+  - alert: HighAPILatency
+    expr: api:request_latency:p95 > 0.2
+    for: 5m
+    labels:
+      severity: critical
+      team: operations
+      service: api-gateway
+      component: api
+      escalation_level: "1"
+    annotations:
+      summary: High API latency detected
+      description: 95th percentile API latency is above 200ms threshold
+      runbook_url: https://wiki.flyusa.com/ops/runbooks/high-api-latency
+      dashboard_url: https://grafana.flyusa.com/d/api-performance
+      alert_details: 'Current latency: {{ $value }}ms, Threshold: 200ms'
+
+- name: tracking_system_alerts
+  rules:
+  - alert: AircraftPositionUpdateDelay
+    expr: tracking:position_update:delay > 5
+    for: 1m
+    labels:
+      severity: critical
+      team: operations
+      service: tracking-service
+      component: adsb
+      escalation_level: "1"
+    annotations:
+      summary: Aircraft position updates delayed
+      description: Position updates exceeding 5 second threshold
+      runbook_url: https://wiki.flyusa.com/ops/runbooks/position-delay
+      dashboard_url: https://grafana.flyusa.com/d/tracking-performance
+      alert_details: 'Current delay: {{ $value }}s, Threshold: 5s'
+
+- name: service_availability_alerts
+  rules:
+  - alert: ServiceUnavailable
+    expr: service:availability:ratio < 0.999
+    for: 1m
+    labels:
+      severity: critical
+      team: operations
+      service: all
+      component: availability
+      escalation_level: "2"
+    annotations:
+      summary: Service availability below SLA
+      description: Service availability has dropped below 99.9% threshold
+      runbook_url: https://wiki.flyusa.com/ops/runbooks/service-availability
+      dashboard_url: https://grafana.flyusa.com/d/service-health
+      alert_details: 'Current availability: {{ $value }}%, Threshold: 99.9%'
+
+  - alert: TrackingServiceDegraded
+    expr: service:tracking:availability < 0.9995
+    for: 2m
+    labels:
+      severity: critical
+      team: operations
+      service: tracking-service
+      component: availability
+      escalation_level: "1"
+    annotations:
+      summary: Aircraft tracking service degraded
+      description: Tracking service availability below 99.95% threshold
+      runbook_url: https://wiki.flyusa.com/ops/runbooks/tracking-degraded
+      dashboard_url: https://grafana.flyusa.com/d/tracking-health
+      alert_details: 'Current availability: {{ $value }}%, Threshold: 99.95%'
+
+- name: error_rate_alerts
+  rules:
+  - alert: HighErrorRate
+    expr: service:error_rate:ratio > 0.001
+    for: 5m
+    labels:
+      severity: critical
+      team: operations
+      service: all
+      component: errors
+      escalation_level: "1"
+    annotations:
+      summary: High error rate detected
+      description: Service error rate exceeding 0.1% threshold
+      runbook_url: https://wiki.flyusa.com/ops/runbooks/high-error-rate
+      dashboard_url: https://grafana.flyusa.com/d/error-analysis
+      alert_details: 'Current error rate: {{ $value }}%, Threshold: 0.1%'
+
+  - alert: TrackingErrorSpike
+    expr: tracking:error_rate:ratio > 0.0001
+    for: 2m
+    labels:
+      severity: critical
+      team: operations
+      service: tracking-service
+      component: errors
+      escalation_level: "1"
+    annotations:
+      summary: Aircraft tracking error spike
+      description: Position tracking errors exceeding 0.01% threshold
+      runbook_url: https://wiki.flyusa.com/ops/runbooks/tracking-errors
+      dashboard_url: https://grafana.flyusa.com/d/tracking-errors
+      alert_details: 'Current error rate: {{ $value }}%, Threshold: 0.01%'
+
+- name: resource_utilization_alerts
+  rules:
+  - alert: HighMemoryUsage
+    expr: container:memory_usage:percent > 85
+    for: 5m
+    labels:
+      severity: warning
+      team: operations
+      service: all
+      component: resources
+      escalation_level: "1"
+    annotations:
+      summary: High memory utilization
+      description: Container memory usage above 85% threshold
+      runbook_url: https://wiki.flyusa.com/ops/runbooks/high-memory
+      dashboard_url: https://grafana.flyusa.com/d/resource-usage
+      alert_details: 'Current usage: {{ $value }}%, Threshold: 85%'
+
+  - alert: HighCPUUsage
+    expr: container:cpu_usage:percent > 80
+    for: 5m
+    labels:
+      severity: warning
+      team: operations
+      service: all
+      component: resources
+      escalation_level: "1"
+    annotations:
+      summary: High CPU utilization
+      description: Container CPU usage above 80% threshold
+      runbook_url: https://wiki.flyusa.com/ops/runbooks/high-cpu
+      dashboard_url: https://grafana.flyusa.com/d/resource-usage
+      alert_details: 'Current usage: {{ $value }}%, Threshold: 80%'
+
+  - alert: TrackingCapacityWarning
+    expr: tracking:processing_capacity:percent > 75
+    for: 5m
+    labels:
+      severity: warning
+      team: operations
+      service: tracking-service
+      component: resources
+      escalation_level: "1"
+    annotations:
+      summary: High tracking processing load
+      description: Aircraft position tracking capacity above 75% threshold
+      runbook_url: https://wiki.flyusa.com/ops/runbooks/tracking-capacity
+      dashboard_url: https://grafana.flyusa.com/d/tracking-resources
+      alert_details: 'Current capacity: {{ $value }}%, Threshold: 75%'
