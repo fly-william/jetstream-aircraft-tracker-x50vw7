@@ -1,0 +1,154 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: trip-management
+  namespace: jetstream
+  labels:
+    app: trip-management
+    component: backend
+    part-of: jetstream
+  annotations:
+    description: "Trip management service handling trip operations, milestones, and service requests"
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "9090"
+spec:
+  replicas: 3
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: trip-management
+  template:
+    metadata:
+      labels:
+        app: trip-management
+        component: backend
+        part-of: jetstream
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9090"
+        checksum/config: "${CONFIG_CHECKSUM}"
+        checksum/secrets: "${SECRETS_CHECKSUM}"
+    spec:
+      containers:
+      - name: trip-management
+        image: ${REGISTRY}/jetstream/trip-management:${TAG}
+        imagePullPolicy: IfNotPresent
+        ports:
+        - name: http
+          containerPort: 3000
+          protocol: TCP
+        - name: grpc
+          containerPort: 9000
+          protocol: TCP
+        - name: metrics
+          containerPort: 9090
+          protocol: TCP
+        env:
+        - name: NODE_ENV
+          value: "production"
+        - name: SERVICE_NAME
+          value: "trip-management"
+        - name: DB_HOST
+          valueFrom:
+            secretKeyRef:
+              name: jetstream-secrets
+              key: MAIN_DB_HOST
+        - name: DB_PORT
+          valueFrom:
+            secretKeyRef:
+              name: jetstream-secrets
+              key: MAIN_DB_PORT
+        - name: DB_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: jetstream-secrets
+              key: MAIN_DB_USERNAME
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: jetstream-secrets
+              key: MAIN_DB_PASSWORD
+        - name: TEAMS_CLIENT_ID
+          valueFrom:
+            secretKeyRef:
+              name: jetstream-secrets
+              key: TEAMS_CLIENT_ID
+        - name: TEAMS_CLIENT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: jetstream-secrets
+              key: TEAMS_CLIENT_SECRET
+        - name: TEAMS_TENANT_ID
+          valueFrom:
+            secretKeyRef:
+              name: jetstream-secrets
+              key: TEAMS_TENANT_ID
+        resources:
+          requests:
+            cpu: "500m"
+            memory: "512Mi"
+          limits:
+            cpu: "1000m"
+            memory: "1Gi"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: http
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: http
+          initialDelaySeconds: 15
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 2
+        startupProbe:
+          httpGet:
+            path: /health
+            port: http
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          failureThreshold: 12
+        volumeMounts:
+        - name: config
+          mountPath: /app/config
+          readOnly: true
+        - name: secrets
+          mountPath: /app/secrets
+          readOnly: true
+        - name: tmp
+          mountPath: /tmp
+      volumes:
+      - name: config
+        configMap:
+          name: jetstream-trip-config
+      - name: secrets
+        secret:
+          secretName: jetstream-secrets
+      - name: tmp
+        emptyDir: {}
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000
+      terminationGracePeriodSeconds: 60
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                  - trip-management
+              topologyKey: kubernetes.io/hostname
