@@ -1,0 +1,204 @@
+# Istio Service Mesh Configuration for JetStream Platform
+# Version: istio 1.16+
+# Purpose: Define comprehensive mesh policies, gateways, and security controls
+
+apiVersion: install.istio.io/v1alpha1
+kind: IstioOperator
+metadata:
+  name: jetstream-mesh
+  namespace: istio-system
+spec:
+  profile: default
+  components:
+    pilot:
+      k8s:
+        resources:
+          requests:
+            cpu: 500m
+            memory: 2Gi
+          limits:
+            cpu: 1000m
+            memory: 4Gi
+        hpaSpec:
+          minReplicas: 2
+          maxReplicas: 5
+    ingressGateways:
+      - name: istio-ingressgateway
+        enabled: true
+        k8s:
+          service:
+            type: LoadBalancer
+            ports:
+              - name: http2
+                port: 80
+                targetPort: 8080
+              - name: https
+                port: 443
+                targetPort: 8443
+              - name: grpc
+                port: 15443
+                targetPort: 15443
+  values:
+    global:
+      proxy:
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 200m
+            memory: 256Mi
+      mtls:
+        enabled: true
+        auto: true
+    pilot:
+      traceSampling: 1.0
+      enableProtocolSniffing: true
+      enableAutoMtls: true
+    telemetry:
+      enabled: true
+      v2:
+        enabled: true
+        prometheus:
+          enabled: true
+        stackdriver:
+          enabled: false
+
+---
+apiVersion: networking.istio.io/v1beta1
+kind: Gateway
+metadata:
+  name: jetstream-gateway
+  namespace: istio-system
+spec:
+  selector:
+    istio: ingressgateway
+  servers:
+    - port:
+        number: 80
+        name: http
+        protocol: HTTP
+      hosts:
+        - "*"
+      tls:
+        httpsRedirect: true
+    - port:
+        number: 443
+        name: https
+        protocol: HTTPS
+      hosts:
+        - "*"
+      tls:
+        mode: SIMPLE
+        credentialName: jetstream-tls-cert
+    - port:
+        number: 15443
+        name: grpc
+        protocol: GRPC
+      hosts:
+        - "*"
+      tls:
+        mode: SIMPLE
+        credentialName: jetstream-tls-cert
+
+---
+apiVersion: security.istio.io/v1beta1
+kind: PeerAuthentication
+metadata:
+  name: jetstream-mesh-policy
+  namespace: istio-system
+spec:
+  mtls:
+    mode: STRICT
+  portLevelMtls:
+    15443:
+      mode: STRICT
+
+---
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: jetstream-authorization-policy
+  namespace: istio-system
+spec:
+  action: ALLOW
+  rules:
+    # API Gateway to Tracking Service
+    - from:
+        - source:
+            principals: ["cluster.local/ns/jetstream-api/sa/api-gateway"]
+      to:
+        - operation:
+            paths: ["/tracking.v1.*"]
+            methods: ["GET", "POST"]
+      when:
+        - key: request.auth.claims[iss]
+          values: ["https://sts.windows.net/*"]
+
+    # API Gateway to Trip Service
+    - from:
+        - source:
+            principals: ["cluster.local/ns/jetstream-api/sa/api-gateway"]
+      to:
+        - operation:
+            paths: ["/trip.v1.*"]
+            methods: ["GET", "POST", "PUT", "PATCH"]
+      when:
+        - key: request.auth.claims[iss]
+          values: ["https://sts.windows.net/*"]
+
+    # API Gateway to Notification Service
+    - from:
+        - source:
+            principals: ["cluster.local/ns/jetstream-api/sa/api-gateway"]
+      to:
+        - operation:
+            paths: ["/notification.v1.*"]
+            methods: ["POST"]
+      when:
+        - key: request.auth.claims[iss]
+          values: ["https://sts.windows.net/*"]
+
+    # Inter-service communication
+    - from:
+        - source:
+            namespaces: ["jetstream-tracking", "jetstream-trip", "jetstream-notification"]
+      to:
+        - operation:
+            methods: ["GET", "POST", "PUT", "PATCH"]
+      when:
+        - key: source.principal
+          values: ["cluster.local/ns/*/sa/*"]
+
+---
+apiVersion: telemetry.istio.io/v1alpha1
+kind: Telemetry
+metadata:
+  name: jetstream-telemetry
+  namespace: istio-system
+spec:
+  tracing:
+    sampling: 100
+    customTags:
+      environment:
+        literal:
+          value: production
+  metrics:
+    - providers:
+        - name: prometheus
+      overrides:
+        - match:
+            metric: REQUEST_COUNT
+          tagOverrides:
+            response_code:
+              operation: UPSERT
+            response_flags:
+              operation: UPSERT
+    - providers:
+        - name: prometheus
+      overrides:
+        - match:
+            metric: REQUEST_DURATION
+          tagOverrides:
+            response_code:
+              operation: UPSERT
