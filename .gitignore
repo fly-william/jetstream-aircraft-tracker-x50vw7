@@ -1,0 +1,122 @@
+node_modules/
+jspm_packages/
+.pnp/
+.pnp.js
+package-lock.json
+yarn.lock
+
+# Build outputs
+dist/
+build/
+out/
+*.tsbuildinfo
+*.js.map
+*.css.map
+*.min.js
+*.min.css
+
+# Environment and secrets
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+*.pfx
+*.p12
+*.token
+*.secret
+
+# Testing and coverage
+coverage/
+junit.xml
+test-results/
+coverage.json
+coverage.xml
+.nyc_output/
+
+# IDE and editors
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.vs/
+*.sublime-workspace
+*.sublime-project
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+*.lnk
+
+# Logs and debugging
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+debug.log
+logs/
+
+# Infrastructure
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+.terraformrc
+terraform.rc
+*.publishsettings
+*.tar
+*.gz
+
+# Project specific
+# Backend
+src/backend/dist/
+src/backend/node_modules/
+src/backend/coverage/
+src/backend/.env
+src/backend/logs/
+
+# Frontend
+src/web/build/
+src/web/node_modules/
+src/web/coverage/
+src/web/.env.local
+src/web/.env.*.local
+
+# Infrastructure
+infrastructure/terraform/.terraform/
+infrastructure/terraform/*.tfstate
+infrastructure/terraform/*.tfstate.*
+infrastructure/terraform/*.tfvars
+
+# Temporary files
+*.tmp
+*.temp
+.cache/
+.temp/
+
+# Docker
+.docker/
+*.dockerfile.cache
+
+# Azure
+.azure/
+*.pubxml
+*.publishproj
+
+# Kubernetes
+*.kubeconfig
+kube-config/
+
+# SSL/TLS Certificates
+*.crt
+*.cer
+*.der
+*.csr
+
+# Backup files
+*.bak
+*.backup
+*.[Bb]ak
+*.old
