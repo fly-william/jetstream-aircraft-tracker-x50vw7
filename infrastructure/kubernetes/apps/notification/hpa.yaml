@@ -1,0 +1,71 @@
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: notification-service
+  namespace: jetstream-notification
+  labels:
+    app: notification-service
+    component: backend
+    part-of: jetstream
+    app.kubernetes.io/name: notification-service
+    app.kubernetes.io/part-of: jetstream
+    app.kubernetes.io/component: notification
+    app.kubernetes.io/version: 1.0.0
+  annotations:
+    monitoring.jetstream.io/enabled: "true"
+    prometheus.io/scrape: "true"
+    prometheus.io/path: "/metrics"
+    teams.jetstream.io/api-monitoring: "enabled"
+    autoscaling.jetstream.io/last-modified: "2024-01-01T00:00:00Z"
+
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: notification-service
+
+  minReplicas: 3
+  maxReplicas: 10
+
+  metrics:
+    # CPU-based scaling
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+
+    # Memory-based scaling
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 80
+
+    # Custom metric for Teams API latency
+    - type: Pods
+      pods:
+        metric:
+          name: teams_api_latency_seconds
+        target:
+          type: AverageValue
+          averageValue: 5
+
+  behavior:
+    scaleUp:
+      stabilizationWindowSeconds: 60
+      policies:
+      - type: Pods
+        value: 2
+        periodSeconds: 60
+      selectPolicy: Max
+
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies:
+      - type: Pods
+        value: 1
+        periodSeconds: 120
+      selectPolicy: Min
