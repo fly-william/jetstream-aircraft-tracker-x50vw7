@@ -1,0 +1,136 @@
+JETSTREAM PLATFORM SOFTWARE LICENSE AGREEMENT
+
+Last Updated: 2024
+
+1. DEFINITIONS
+
+"Software" means the JetStream aircraft tracking and trip management platform, including all source code, documentation, APIs, user interfaces, database schemas, algorithms, and integration mechanisms.
+
+"Licensor" means FlyUSA, the owner and provider of the Software.
+
+"Licensee" means the organization licensed to use the Software.
+
+2. GRANT OF LICENSE
+
+Subject to the terms of this Agreement, Licensor grants Licensee a non-exclusive, non-transferable license to:
+
+a) Deploy and use the Software within Licensee's organization
+b) Create backup copies for disaster recovery purposes
+c) Modify system configurations within authorized parameters
+d) Implement authorized external system integrations
+
+3. OWNERSHIP AND PROTECTION
+
+3.1 Protected Components
+- All platform source code, algorithms, and implementations
+- Technical, user, and operational documentation
+- Internal and external APIs and specifications
+- UI designs, layouts, and interactions
+- Database schemas and data structures
+- Aircraft tracking and prediction algorithms
+- System integration mechanisms
+
+3.2 Intellectual Property
+All intellectual property rights in the Software remain the exclusive property of Licensor.
+
+4. RESTRICTIONS
+
+Licensee shall not:
+a) Redistribute or share any component of the Software
+b) Modify core platform functionality
+c) Reverse engineer or attempt to derive source code
+d) Sublicense or transfer usage rights
+e) Use the Software to develop competing aviation platforms
+
+5. COMPLIANCE REQUIREMENTS
+
+5.1 Aviation Regulations
+Licensee shall comply with all applicable:
+- FAA regulations
+- EASA requirements
+- Other relevant aviation authority mandates
+
+5.2 Data Privacy
+Licensee shall maintain compliance with:
+- GDPR
+- CCPA
+- Other applicable privacy regulations
+
+5.3 Security Standards
+Licensee shall adhere to:
+- ISO 27001 requirements
+- SOC 2 controls
+- Aviation security standards
+
+5.4 Export Controls
+Licensee shall comply with ITAR and other applicable export control regulations.
+
+6. DATA PROTECTION
+
+6.1 Data Classification
+Licensee shall protect:
+- Aircraft position and tracking data
+- Customer information
+- Operational data
+- System configuration data
+
+6.2 Security Measures
+Licensee shall implement:
+- Access controls
+- Encryption standards
+- Security monitoring
+- Incident response procedures
+
+7. WARRANTY
+
+7.1 Limited Warranty
+Licensor warrants the Software will perform substantially in accordance with documentation for 90 days from deployment.
+
+7.2 Warranty Exclusions
+This warranty does not cover:
+- Flight operation decisions
+- Data accuracy guarantees
+- Integration performance
+- Third-party services
+
+8. LIABILITY LIMITATION
+
+8.1 Limitation Scope
+Licensor's liability shall be limited to the amount of license fees paid in the previous 12 months.
+
+8.2 Exclusions
+This limitation does not apply to:
+- Gross negligence
+- Willful misconduct
+- Breach of confidentiality
+
+9. TERM AND TERMINATION
+
+9.1 Term
+This Agreement remains effective until terminated.
+
+9.2 Termination
+Licensor may terminate immediately upon:
+- Material breach of this Agreement
+- Violation of usage restrictions
+- Non-compliance with aviation regulations
+
+10. FORCE MAJEURE
+
+Neither party shall be liable for failures caused by:
+- Natural disasters
+- Acts of war or terrorism
+- Government actions
+- Other events beyond reasonable control
+
+11. GOVERNING LAW
+
+This Agreement shall be governed by the laws of [Jurisdiction], excluding conflicts of law provisions.
+
+12. ENTIRE AGREEMENT
+
+This Agreement constitutes the entire understanding between parties regarding the Software and supersedes all prior agreements.
+
+By using the Software, Licensee agrees to be bound by the terms of this Agreement.
+
+Copyright © 2024 FlyUSA. All rights reserved.
