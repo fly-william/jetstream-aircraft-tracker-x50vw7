@@ -1,0 +1,257 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": "-- Grafana --",
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "graphTooltip": 0,
+  "id": "aircraft-tracking",
+  "uid": "aircraft-tracking-001",
+  "title": "Aircraft Tracking Metrics",
+  "tags": ["aircraft", "tracking", "position", "adsb", "real-time"],
+  "timezone": "browser",
+  "refresh": "5s",
+  "schemaVersion": 36,
+  "version": 1,
+  "panels": [
+    {
+      "title": "Active Aircraft Count",
+      "type": "stat",
+      "datasource": "prometheus",
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 0,
+        "y": 0
+      },
+      "targets": [
+        {
+          "expr": "sum(aircraft_active_count)",
+          "legendFormat": "Active Aircraft"
+        }
+      ],
+      "thresholds": {
+        "steps": [
+          { "value": 0, "color": "red" },
+          { "value": 1, "color": "green" }
+        ]
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "textMode": "auto"
+      }
+    },
+    {
+      "title": "Position Updates Rate",
+      "type": "timeseries",
+      "datasource": "prometheus",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 6,
+        "y": 0
+      },
+      "targets": [
+        {
+          "expr": "rate(position_updates_total[5m])",
+          "legendFormat": "Updates/sec"
+        }
+      ],
+      "thresholds": {
+        "steps": [
+          { "value": 0, "color": "red" },
+          { "value": 1, "color": "yellow" },
+          { "value": 5, "color": "green" }
+        ]
+      },
+      "options": {
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      }
+    },
+    {
+      "title": "ADS-B Data Processing Latency",
+      "type": "gauge",
+      "datasource": "prometheus",
+      "gridPos": {
+        "h": 8,
+        "w": 6,
+        "x": 0,
+        "y": 4
+      },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(adsb_processing_duration_seconds_bucket[5m])) by (le))",
+          "legendFormat": "95th Percentile"
+        }
+      ],
+      "thresholds": {
+        "steps": [
+          { "value": 0, "color": "green" },
+          { "value": 3, "color": "yellow" },
+          { "value": 5, "color": "red" }
+        ]
+      },
+      "options": {
+        "orientation": "auto",
+        "minValue": 0,
+        "maxValue": 10,
+        "showThresholdLabels": true,
+        "showThresholdMarkers": true
+      }
+    },
+    {
+      "title": "Position Data Storage Growth",
+      "type": "timeseries",
+      "datasource": "prometheus",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 12
+      },
+      "targets": [
+        {
+          "expr": "sum(position_data_size_bytes) by (table)",
+          "legendFormat": "{{table}}"
+        }
+      ],
+      "options": {
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        },
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": ["mean", "max"]
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes"
+        }
+      }
+    },
+    {
+      "title": "WebSocket Connections",
+      "type": "timeseries",
+      "datasource": "prometheus",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 12
+      },
+      "targets": [
+        {
+          "expr": "sum(websocket_connections_count)",
+          "legendFormat": "Active Connections"
+        }
+      ],
+      "thresholds": {
+        "steps": [
+          { "value": 0, "color": "green" },
+          { "value": 400, "color": "yellow" },
+          { "value": 500, "color": "red" }
+        ]
+      },
+      "alert": {
+        "name": "High WebSocket Connection Count",
+        "conditions": [
+          {
+            "type": "query",
+            "query": { "params": ["A", "5m", "now"] },
+            "reducer": { "type": "avg" },
+            "evaluator": { "type": "gt", "params": [500] }
+          }
+        ]
+      }
+    },
+    {
+      "title": "Data Validation Errors",
+      "type": "timeseries",
+      "datasource": "prometheus",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 20
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(position_validation_errors_total[5m])) by (error_type)",
+          "legendFormat": "{{error_type}}"
+        }
+      ],
+      "options": {
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        },
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": ["mean", "max"]
+        }
+      },
+      "alert": {
+        "name": "High Validation Error Rate",
+        "conditions": [
+          {
+            "type": "query",
+            "query": { "params": ["A", "5m", "now"] },
+            "reducer": { "type": "sum" },
+            "evaluator": { "type": "gt", "params": [10] }
+          }
+        ]
+      }
+    }
+  ],
+  "templating": {
+    "list": [
+      {
+        "name": "datasource",
+        "type": "datasource",
+        "query": "prometheus"
+      },
+      {
+        "name": "interval",
+        "type": "interval",
+        "values": ["30s", "1m", "5m", "10m", "30m", "1h"]
+      }
+    ]
+  },
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
+  "links": [
+    {
+      "title": "System Metrics",
+      "type": "dashboard",
+      "tags": ["system-metrics"],
+      "asDropdown": false,
+      "icon": "dashboard",
+      "targetBlank": true,
+      "url": "/d/jetstream-system-metrics"
+    }
+  ]
+}
