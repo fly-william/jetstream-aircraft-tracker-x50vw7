@@ -1,0 +1,47 @@
+node_modules
+npm-debug.log*
+
+# Build outputs
+dist
+coverage
+temp/
+
+# Test files
+tests
+__tests__
+*.test.ts
+*.spec.ts
+
+# Version control
+.git
+.gitignore
+
+# Environment and configuration
+.env*
+.eslintrc*
+.prettierrc*
+nodemon.json
+docker-compose*.yml
+
+# Documentation
+*.md
+LICENSE*
+
+# Logs and debugging
+*.log
+
+# Security and certificates
+*.key
+*.pem
+teams-config/
+adsb-cache/
+
+# Aviation-specific exclusions
+compliance/
+audit/
+flight-logs/
+
+# Cache and temporary files
+temp/
+.DS_Store
+Thumbs.db
