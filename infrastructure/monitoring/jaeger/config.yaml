@@ -1,0 +1,109 @@
+apiVersion: jaegertracing.io/v1  # jaeger-operator v1.35.0
+kind: Jaeger
+metadata:
+  name: jetstream-jaeger
+  namespace: monitoring
+  labels:
+    app: jetstream
+    component: tracing
+spec:
+  strategy: production
+  storage:
+    type: elasticsearch
+    options:
+      es:
+        server-urls: http://elasticsearch:9200
+        index-prefix: jetstream
+        username: ${ES_USERNAME}
+        password: ${ES_PASSWORD}
+        tls:
+          enabled: true
+          ca: /etc/elasticsearch/certs/ca.crt
+    securityOptions:
+      enableTLS: true
+      enableUserAuth: true
+  ingress:
+    enabled: true
+    security: oauth-proxy
+    annotations:
+      kubernetes.io/ingress.class: nginx
+      nginx.ingress.kubernetes.io/auth-url: "https://oauth2-proxy.monitoring.svc.cluster.local/oauth2/auth"
+      nginx.ingress.kubernetes.io/auth-signin: "https://oauth2-proxy.monitoring.svc.cluster.local/oauth2/start"
+  query:
+    replicas: 2
+    resources:
+      limits:
+        cpu: 500m
+        memory: 512Mi
+      requests:
+        cpu: 250m
+        memory: 256Mi
+    serviceAccount: jaeger-query
+    options:
+      query:
+        base-path: /jaeger
+    podAntiAffinity: true
+  collector:
+    replicas: 2
+    resources:
+      limits:
+        cpu: 1000m
+        memory: 1Gi
+      requests:
+        cpu: 500m
+        memory: 512Mi
+    serviceAccount: jaeger-collector
+    options:
+      collector:
+        grpc-server:
+          host-port: ":14250"
+    autoscale: true
+    maxReplicas: 5
+    podAntiAffinity: true
+  agent:
+    strategy: DaemonSet
+    resources:
+      limits:
+        cpu: 200m
+        memory: 256Mi
+      requests:
+        cpu: 100m
+        memory: 128Mi
+  sampling:
+    options:
+      default_strategy:
+        type: probabilistic
+        param: 1.0
+      service_strategies:
+        - service: api-gateway
+          type: probabilistic
+          param: 1.0
+        - service: aircraft-tracking
+          type: probabilistic
+          param: 0.5
+        - service: trip-management
+          type: probabilistic
+          param: 1.0
+  volumeMounts:
+    - name: elasticsearch-certs
+      mountPath: /etc/elasticsearch/certs
+      readOnly: true
+  volumes:
+    - name: elasticsearch-certs
+      secret:
+        secretName: elasticsearch-certs
+  serviceMonitor:
+    enabled: true
+    interval: 30s
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "16686"
+  securityContext:
+    runAsUser: 1000
+    runAsGroup: 1000
+    fsGroup: 1000
+  tolerations:
+    - key: "monitoring"
+      operator: "Equal"
+      value: "true"
+      effect: "NoSchedule"
