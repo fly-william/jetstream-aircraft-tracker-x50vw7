@@ -1,0 +1,63 @@
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: web-hpa
+  namespace: jetstream
+  labels:
+    app: jetstream
+    component: web
+    part-of: frontend
+    managed-by: kubernetes
+spec:
+  # Target the web deployment for autoscaling
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: web
+  
+  # Maintain minimum 3 replicas for high availability (99.9% uptime)
+  minReplicas: 3
+  # Scale up to 10 replicas to handle peak load (500+ concurrent users)
+  maxReplicas: 10
+  
+  # Resource-based scaling metrics
+  metrics:
+    # CPU-based scaling
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          # Scale when CPU reaches 70% utilization for optimal performance
+          averageUtilization: 70
+    
+    # Memory-based scaling
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          # Scale when memory reaches 80% utilization to prevent OOM
+          averageUtilization: 80
+  
+  # Scaling behavior configuration
+  behavior:
+    # Scale up configuration
+    scaleUp:
+      # 1-minute stabilization window for quick response to load
+      stabilizationWindowSeconds: 60
+      policies:
+        # Add up to 2 pods per minute during scale up
+        - type: Pods
+          value: 2
+          periodSeconds: 60
+    
+    # Scale down configuration
+    scaleDown:
+      # 5-minute stabilization window to prevent thrashing
+      stabilizationWindowSeconds: 300
+      policies:
+        # Remove 1 pod per minute during scale down
+        - type: Pods
+          value: 1
+          periodSeconds: 60
