@@ -1,0 +1,28 @@
+<svg 
+  xmlns="http://www.w3.org/2000/svg" 
+  viewBox="0 0 24 24" 
+  width="24" 
+  height="24" 
+  fill="currentColor"
+  role="img"
+  aria-label="Dashboard Navigation"
+  focusable="false"
+  lang="en"
+>
+  <title>Navigate to Dashboard</title>
+  <desc>Dashboard icon representing the main control panel</desc>
+  
+  <!-- Main dashboard frame with rounded corners -->
+  <path d="M3 3h18a1 1 0 0 1 1 1v16a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1zm0 2v14h18V5H3z" />
+  
+  <!-- Left panel representing primary controls -->
+  <path d="M5 7h6v4H5V7zm0 6h6v4H5v-4z" />
+  
+  <!-- Right panel representing secondary displays -->
+  <path d="M13 7h6v10h-6V7z" />
+  
+  <!-- Decorative elements suggesting aviation instruments -->
+  <circle cx="8" cy="9" r="1.5" />
+  <circle cx="8" cy="15" r="1.5" />
+  <path d="M15 9h2v2h-2V9zm0 4h2v2h-2v-2z" />
+</svg>
