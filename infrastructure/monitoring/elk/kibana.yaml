@@ -1,0 +1,168 @@
+# Kibana 7.17.x Configuration
+# JetStream Platform Monitoring & Analytics Interface
+
+# Server Configuration
+server:
+  name: jetstream-kibana
+  host: "0.0.0.0"
+  port: 5601
+  basePath: "/kibana"
+  rewriteBasePath: true
+  maxPayloadBytes: 10485760
+
+# Elasticsearch Connection
+elasticsearch:
+  hosts: ["http://elasticsearch-master:9200"]
+  username: "${ELASTICSEARCH_USERNAME}"
+  password: "${ELASTICSEARCH_PASSWORD}"
+  ssl:
+    verificationMode: certificate
+    certificateAuthorities: 
+      - /usr/share/kibana/config/certs/elastic-ca.pem
+
+# X-Pack Features
+xpack:
+  security:
+    enabled: true
+    encryptionKey: "${ENCRYPTION_KEY}"
+    session:
+      idleTimeout: "1h"
+      lifespan: "24h"
+  
+  monitoring:
+    enabled: true
+    ui:
+      container:
+        elasticsearch:
+          enabled: true
+  
+  reporting:
+    enabled: true
+    capture:
+      maxAttempts: 3
+      timeouts:
+        waitForElements: 30000
+
+# Logging Configuration
+logging:
+  appenders:
+    file:
+      type: file
+      fileName: /var/log/kibana/kibana.log
+      layout:
+        type: pattern
+        pattern: "[%d{ISO8601}][%p][%c] %m"
+  root:
+    appenders: ["file"]
+    level: info
+
+# Default Visualization Settings
+kibana:
+  defaultAppId: "discover"
+  index: ".kibana"
+
+# Index Pattern Defaults
+kibana.defaultIndex: "jetstream-logs-*"
+
+# Search and Discovery
+discover:
+  sampleSize: 10000
+  aggs:
+    terms:
+      maxBuckets: 1000
+
+# Dashboard Settings
+dashboard:
+  searchTimeout: "30s"
+  refreshInterval: "30s"
+
+# Saved Objects Configuration
+savedObjects:
+  maxImportPayloadBytes: 26214400
+  maxImportExportSize: 10000
+
+# Security Configuration
+xpack.security.authc:
+  providers:
+    basic:
+      order: 0
+    saml:
+      order: 1
+      realm: azure-ad
+      signInEndpoint: "${SAML_SIGN_IN_URL}"
+      issuer: "https://kibana.flyusa.com"
+      certificate: /usr/share/kibana/config/certs/saml.crt
+
+# Role-based Access Control
+xpack.security.authorization:
+  roles:
+    - name: kibana_admin
+      privileges: ["all"]
+      indices:
+        - names: ["jetstream-logs-*"]
+          privileges: ["all"]
+    
+    - name: kibana_operations
+      privileges: ["read", "view_index_metadata"]
+      indices:
+        - names: ["jetstream-logs-*"]
+          privileges: ["read", "view_index_metadata"]
+    
+    - name: kibana_readonly
+      privileges: ["read"]
+      indices:
+        - names: ["jetstream-logs-*"]
+          privileges: ["read"]
+
+# Default Index Pattern
+defaultIndex:
+  title: "jetstream-logs-*"
+  timeFieldName: "@timestamp"
+  fields:
+    - name: "@timestamp"
+      type: "date"
+    - name: "log_level"
+      type: "keyword"
+    - name: "service"
+      type: "keyword"
+    - name: "message"
+      type: "text"
+
+# Telemetry Settings
+telemetry:
+  enabled: false
+  allowChangingOptInStatus: false
+
+# Plugin Configuration
+plugins:
+  security: true
+  spaces: true
+  dashboard_mode: true
+  reporting: true
+  monitoring: true
+
+# Performance Settings
+ops:
+  interval: 5000
+  cGroupOverrides:
+    cpuPath: null
+    cpuAcctPath: null
+
+# SSL/TLS Configuration
+server.ssl:
+  enabled: true
+  certificate: /usr/share/kibana/config/certs/kibana.crt
+  key: /usr/share/kibana/config/certs/kibana.key
+
+# CORS Settings
+server.cors:
+  enabled: true
+  origin: ["https://*.flyusa.com"]
+  credentials: true
+
+# CSP Settings
+csp.rules:
+  - "default-src 'self'"
+  - "img-src 'self' data: blob:"
+  - "style-src 'self' 'unsafe-inline'"
+  - "script-src 'self' 'unsafe-eval' 'unsafe-inline'"
