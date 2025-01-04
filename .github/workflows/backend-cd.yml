@@ -1,0 +1,156 @@
+name: Backend CD
+
+on:
+  workflow_run:
+    workflows: ["Backend CI"]
+    types: [completed]
+    branches: [main]
+
+env:
+  NODE_VERSION: '20.x'
+  WORKING_DIRECTORY: 'src/backend'
+  AZURE_CONTAINER_REGISTRY: 'jetstreamacr.azurecr.io'
+  KUBERNETES_NAMESPACE: 'jetstream'
+  DEPLOYMENT_STRATEGY: 'blue-green'
+  CANARY_PERCENTAGE: '20'
+  HEALTH_CHECK_PATH: '/health'
+  ROLLBACK_THRESHOLD: '5'
+
+# Ensure only one deployment runs at a time
+concurrency:
+  group: backend-cd-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  id-token: write
+  contents: read
+  packages: read
+
+jobs:
+  deploy:
+    name: Deploy to AKS
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    # Only run if CI workflow succeeded
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    
+    environment:
+      name: production
+      url: https://api.jetstream.flyusa.com
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Download Build Artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: build-output
+          path: ${{ env.WORKING_DIRECTORY }}/dist
+
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v2
+        with:
+          platforms: linux/amd64,linux/arm64
+
+      - name: OIDC Login to Azure
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Login to Azure Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ${{ env.AZURE_CONTAINER_REGISTRY }}
+          username: ${{ secrets.ACR_USERNAME }}
+          password: ${{ secrets.ACR_PASSWORD }}
+
+      - name: Set AKS Context
+        uses: azure/aks-set-context@v3
+        with:
+          resource-group: jetstream-prod-rg
+          cluster-name: jetstream-prod-aks
+          admin: false
+          use-kubelogin: true
+
+      - name: Build and Push API Gateway Image
+        uses: docker/build-push-action@v4
+        with:
+          context: ${{ env.WORKING_DIRECTORY }}
+          file: ${{ env.WORKING_DIRECTORY }}/Dockerfile
+          push: true
+          tags: |
+            ${{ env.AZURE_CONTAINER_REGISTRY }}/api-gateway:${{ github.sha }}
+            ${{ env.AZURE_CONTAINER_REGISTRY }}/api-gateway:latest
+          cache-from: type=registry,ref=${{ env.AZURE_CONTAINER_REGISTRY }}/api-gateway:buildcache
+          cache-to: type=registry,ref=${{ env.AZURE_CONTAINER_REGISTRY }}/api-gateway:buildcache,mode=max
+          platforms: linux/amd64,linux/arm64
+          build-args: |
+            NODE_VERSION=${{ env.NODE_VERSION }}
+          sbom: true
+          provenance: true
+
+      - name: Scan Container Image
+        uses: azure/container-scan@v1
+        with:
+          image-name: ${{ env.AZURE_CONTAINER_REGISTRY }}/api-gateway:${{ github.sha }}
+          severity-threshold: HIGH
+          run-quality-checks: true
+
+      - name: Generate Deployment Manifests
+        run: |
+          helm template jetstream ./infrastructure/helm/jetstream \
+            --namespace ${{ env.KUBERNETES_NAMESPACE }} \
+            --set image.tag=${{ github.sha }} \
+            --set image.repository=${{ env.AZURE_CONTAINER_REGISTRY }}/api-gateway \
+            > ./manifests.yaml
+
+      - name: Deploy to AKS
+        uses: azure/k8s-deploy@v4
+        with:
+          namespace: ${{ env.KUBERNETES_NAMESPACE }}
+          manifests: |
+            ./manifests.yaml
+          strategy: ${{ env.DEPLOYMENT_STRATEGY }}
+          images: |
+            ${{ env.AZURE_CONTAINER_REGISTRY }}/api-gateway:${{ github.sha }}
+          timeout: 300s
+          route-method: ingress
+          ingress-name: jetstream-ingress
+          canary-percentage: ${{ env.CANARY_PERCENTAGE }}
+          health-check: ${{ env.HEALTH_CHECK_PATH }}
+          rollback-threshold: ${{ env.ROLLBACK_THRESHOLD }}
+
+      - name: Verify Deployment
+        run: |
+          kubectl rollout status deployment/api-gateway -n ${{ env.KUBERNETES_NAMESPACE }} --timeout=300s
+          curl -f https://api.jetstream.flyusa.com/health || exit 1
+
+      - name: Update Azure Monitor
+        run: |
+          az monitor metrics alert create \
+            --name "api-gateway-deployment-${{ github.sha }}" \
+            --resource-group jetstream-prod-rg \
+            --scopes /subscriptions/${{ secrets.AZURE_SUBSCRIPTION_ID }}/resourceGroups/jetstream-prod-rg/providers/Microsoft.ContainerService/managedClusters/jetstream-prod-aks \
+            --condition "avg Percentage CPU > 80" \
+            --window-size 5m \
+            --evaluation-frequency 1m \
+            --severity 2
+
+      - name: Notify Teams on Success
+        if: success()
+        run: |
+          curl -H "Content-Type: application/json" \
+               -d "{\"text\":\"✅ Successfully deployed API Gateway version ${{ github.sha }} to production\"}" \
+               ${{ secrets.TEAMS_WEBHOOK_URL }}
+
+      - name: Notify Teams on Failure
+        if: failure()
+        run: |
+          curl -H "Content-Type: application/json" \
+               -d "{\"text\":\"❌ Failed to deploy API Gateway version ${{ github.sha }} to production\"}" \
+               ${{ secrets.TEAMS_WEBHOOK_URL }}
