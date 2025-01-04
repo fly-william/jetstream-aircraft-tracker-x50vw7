@@ -1,0 +1,59 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: aircraft-tracking
+  namespace: jetstream-tracking
+  labels:
+    app: aircraft-tracking
+    component: tracking
+    part-of: jetstream
+    version: v1
+    tier: backend
+    app.kubernetes.io/name: aircraft-tracking
+    app.kubernetes.io/part-of: jetstream
+    app.kubernetes.io/component: aircraft-tracking
+    app.kubernetes.io/version: v1.0.0
+  annotations:
+    # Prometheus monitoring configuration
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "3000"
+    prometheus.io/path: "/metrics"
+    
+    # Istio service mesh annotations
+    service.istio.io/canonical-name: "aircraft-tracking"
+    service.istio.io/canonical-revision: "v1"
+    sidecar.istio.io/inject: "true"
+    
+    # Service mesh timeout configurations
+    networking.istio.io/connect-timeout: "5s"
+    networking.istio.io/read-timeout: "10s"
+    networking.istio.io/write-timeout: "10s"
+    
+    # Load balancing configuration
+    service.kubernetes.io/load-balancer-class: "round-robin"
+    
+    # Documentation
+    kubernetes.io/description: "Aircraft tracking service exposing HTTP API and WebSocket endpoints for real-time position data"
+
+spec:
+  type: ClusterIP
+  ports:
+    - name: http-api
+      port: 3000
+      targetPort: 3000
+      protocol: TCP
+      appProtocol: http
+    - name: ws-position
+      port: 3001
+      targetPort: 3001
+      protocol: TCP
+      appProtocol: ws
+  selector:
+    app: aircraft-tracking
+    component: tracking
+  sessionAffinity: None
+  publishNotReadyAddresses: false
+  internalTrafficPolicy: Cluster
+  ipFamilyPolicy: SingleStack
+  ipFamilies:
+    - IPv4
