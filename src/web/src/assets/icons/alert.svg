@@ -1,0 +1,16 @@
+<svg 
+  role="img"
+  aria-label="alert"
+  aria-hidden="false"
+  focusable="false"
+  tabindex="-1"
+  viewBox="0 0 24 24"
+  width="24"
+  height="24"
+  fill="currentColor"
+  preserveAspectRatio="xMidYMid meet"
+>
+  <title>Alert icon indicating important information or warnings</title>
+  <path d="M12 2L1 21h22L12 2zm0 3.99L19.53 19H4.47L12 5.99zM11 16h2v2h-2v-2zm0-6h2v4h-2v-4z"/>
+  <desc>Alert icon in aviation style with triangular warning shape and exclamation mark</desc>
+</svg>
