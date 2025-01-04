@@ -1,0 +1,121 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web
+  namespace: jetstream
+  labels:
+    app: jetstream
+    component: web
+    version: v1
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "80"
+    prometheus.io/path: "/metrics"
+spec:
+  replicas: 3
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: jetstream
+      component: web
+  template:
+    metadata:
+      labels:
+        app: jetstream
+        component: web
+    spec:
+      containers:
+      - name: web
+        image: jetstream/web:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 80
+          protocol: TCP
+          name: http
+        env:
+        - name: NODE_ENV
+          value: production
+        - name: VITE_API_URL
+          valueFrom:
+            configMapKeyRef:
+              name: web-config
+              key: api_url
+        - name: VITE_WS_URL
+          valueFrom:
+            configMapKeyRef:
+              name: web-config
+              key: ws_url
+        - name: VITE_MAPBOX_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: web-secrets
+              key: mapbox_token
+        - name: VITE_AZURE_CLIENT_ID
+          valueFrom:
+            secretKeyRef:
+              name: web-secrets
+              key: azure_client_id
+        - name: VITE_AZURE_TENANT_ID
+          valueFrom:
+            secretKeyRef:
+              name: web-secrets
+              key: azure_tenant_id
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 500m
+            memory: 512Mi
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 80
+          initialDelaySeconds: 30
+          periodSeconds: 30
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 80
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        startupProbe:
+          httpGet:
+            path: /startup
+            port: 80
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          failureThreshold: 30
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 101
+          runAsGroup: 101
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+            - ALL
+      securityContext:
+        fsGroup: 101
+        seccompProfile:
+          type: RuntimeDefault
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                  - jetstream
+              topologyKey: kubernetes.io/hostname
