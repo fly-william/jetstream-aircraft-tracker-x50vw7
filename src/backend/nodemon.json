@@ -1,0 +1,43 @@
+{
+  "watch": [
+    "src/api/**/*",
+    "src/tracking/**/*", 
+    "src/trip/**/*",
+    "src/notification/**/*",
+    "src/shared/**/*",
+    "src/**/*.ts",
+    "src/**/*.json"
+  ],
+  "ignore": [
+    "src/**/*.spec.ts",
+    "src/**/*.test.ts", 
+    "src/tests/**/*",
+    "src/**/__mocks__/**",
+    "src/**/__tests__/**",
+    "node_modules",
+    "dist",
+    "coverage"
+  ],
+  "exec": "ts-node",
+  "ext": ".ts,.js,.json",
+  "env": {
+    "NODE_ENV": "development",
+    "TS_NODE_PROJECT": "./tsconfig.json",
+    "SERVICE_PORT": "3000",
+    "LOG_LEVEL": "debug",
+    "ENABLE_SWAGGER": "true",
+    "ENABLE_METRICS": "true",
+    "API_TIMEOUT": "30000",
+    "MAX_PAYLOAD_SIZE": "5mb"
+  },
+  "verbose": true,
+  "restartable": "rs",
+  "delay": 1500,
+  "events": {
+    "start": "echo 'JetStream service starting...'",
+    "restart": "echo 'JetStream service restarting...'",
+    "crash": "echo 'JetStream service crashed - waiting for changes...'"
+  },
+  "legacyWatch": false,
+  "polling": false
+}
