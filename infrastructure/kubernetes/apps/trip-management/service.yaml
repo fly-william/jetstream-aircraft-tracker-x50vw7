@@ -1,0 +1,43 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: trip-management
+  namespace: jetstream
+  labels:
+    app: trip-management
+    component: backend
+    part-of: jetstream
+    version: v1
+    tier: backend
+    managed-by: kubernetes
+  annotations:
+    # Prometheus monitoring annotations
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "9090"
+    prometheus.io/path: "/metrics"
+    # Istio service mesh annotations
+    service.istio.io/canonical-name: "trip-management"
+    service.istio.io/canonical-revision: "v1"
+    sidecar.istio.io/inject: "true"
+    # Service description
+    description: "Trip management service handling trip operations, milestones, and service requests"
+spec:
+  type: ClusterIP
+  selector:
+    app: trip-management
+    component: backend
+  ports:
+    - name: http
+      port: 3000
+      targetPort: 3000
+      protocol: TCP
+    - name: grpc
+      port: 9000
+      targetPort: 9000
+      protocol: TCP
+    - name: metrics
+      port: 9090
+      targetPort: 9090
+      protocol: TCP
+  sessionAffinity: None
+  publishNotReadyAddresses: false
