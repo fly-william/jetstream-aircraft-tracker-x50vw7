@@ -1,0 +1,50 @@
+apiVersion: v1
+kind: List
+items:
+- apiVersion: v1
+  kind: Namespace
+  metadata:
+    name: jetstream-api
+    labels:
+      istio-injection: enabled
+      environment: production
+      app.kubernetes.io/part-of: jetstream
+      app.kubernetes.io/component: api-gateway
+      app.kubernetes.io/version: 1.0.0
+      security.istio.io/tlsMode: strict
+
+- apiVersion: v1
+  kind: Namespace
+  metadata:
+    name: jetstream-tracking
+    labels:
+      istio-injection: enabled
+      environment: production
+      app.kubernetes.io/part-of: jetstream
+      app.kubernetes.io/component: aircraft-tracking
+      app.kubernetes.io/version: 1.0.0
+      security.istio.io/tlsMode: strict
+
+- apiVersion: v1
+  kind: Namespace
+  metadata:
+    name: jetstream-trip
+    labels:
+      istio-injection: enabled
+      environment: production
+      app.kubernetes.io/part-of: jetstream
+      app.kubernetes.io/component: trip-management
+      app.kubernetes.io/version: 1.0.0
+      security.istio.io/tlsMode: strict
+
+- apiVersion: v1
+  kind: Namespace
+  metadata:
+    name: jetstream-notification
+    labels:
+      istio-injection: enabled
+      environment: production
+      app.kubernetes.io/part-of: jetstream
+      app.kubernetes.io/component: notification
+      app.kubernetes.io/version: 1.0.0
+      security.istio.io/tlsMode: strict
