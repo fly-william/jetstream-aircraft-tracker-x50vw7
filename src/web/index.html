@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+    <!-- Character encoding -->
+    <meta charset="UTF-8">
+
+    <!-- Viewport configuration -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+
+    <!-- Theme colors -->
+    <meta name="theme-color" content="#1976d2" media="(prefers-color-scheme: light)">
+    <meta name="theme-color" content="#0d47a1" media="(prefers-color-scheme: dark)">
+
+    <!-- Primary meta tags -->
+    <meta name="description" content="JetStream - FlyUSA's next-generation aircraft tracking and trip management platform">
+    <meta name="application-name" content="JetStream">
+    <meta name="apple-mobile-web-app-title" content="JetStream">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="format-detection" content="telephone=no">
+
+    <!-- Security headers -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://api.flyusa.com wss://realtime.flyusa.com; frame-ancestors 'none';">
+
+    <!-- Favicons -->
+    <link rel="icon" type="image/svg+xml" href="/src/assets/icons/logo.svg">
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+
+    <!-- Font preconnect -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin="anonymous">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous">
+
+    <!-- Material Icons font -->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons" crossorigin="anonymous">
+
+    <!-- Resource hints -->
+    <link rel="preload" href="/src/main.tsx" as="script" type="module">
+    <link rel="dns-prefetch" href="https://api.flyusa.com">
+
+    <title>JetStream | Aircraft Tracking & Trip Management</title>
+</head>
+<body>
+    <!-- React mount point -->
+    <div id="root" role="application" aria-label="JetStream Application"></div>
+
+    <!-- Portal container for modals -->
+    <div id="portal-root" role="presentation"></div>
+
+    <!-- Fallback for disabled JavaScript -->
+    <noscript>
+        <div style="padding: 20px; text-align: center;">
+            JavaScript is required to run JetStream. Please enable JavaScript in your browser settings.
+        </div>
+    </noscript>
+
+    <!-- Main application script -->
+    <script type="module" src="/src/main.tsx"></script>
+</body>
+</html>
