@@ -1,0 +1,48 @@
+# JetStream CODEOWNERS file
+# Defines code ownership and required reviewers for repository components
+# Format: path_pattern @owner1 @owner2
+
+# Global owners as fallback
+* @jetstream-admins
+
+# Backend services and components
+src/backend/ @jetstream-backend-team
+src/backend/src/services/aircraft-tracking/ @jetstream-tracking-team
+src/backend/src/services/trip-management/ @jetstream-trip-team
+src/backend/src/services/notification/ @jetstream-notification-team
+src/backend/src/config/ @jetstream-security-team @jetstream-backend-team
+
+# Frontend application
+src/web/ @jetstream-frontend-team
+
+# Infrastructure and platform
+infrastructure/ @jetstream-devops-team
+infrastructure/kubernetes/ @jetstream-platform-team
+infrastructure/monitoring/ @jetstream-sre-team
+
+# CI/CD workflows
+.github/workflows/ @jetstream-devops-team
+
+# Documentation
+docs/ @jetstream-admins @jetstream-backend-team @jetstream-frontend-team
+
+# Security-sensitive configurations require security team review
+**/security.config.* @jetstream-security-team
+**/auth.config.* @jetstream-security-team
+**/secrets.*.* @jetstream-security-team
+
+# Test configurations
+**/test/ @jetstream-qa-team
+
+# Database migrations require both backend and DBA review
+**/migrations/ @jetstream-backend-team @jetstream-dba-team
+
+# API specifications require backend and frontend team review
+**/api-specs/ @jetstream-backend-team @jetstream-frontend-team
+
+# Shared utilities and libraries
+src/shared/ @jetstream-backend-team @jetstream-frontend-team
+
+# Build configurations
+**/webpack.*.js @jetstream-frontend-team
+**/tsconfig.*.json @jetstream-frontend-team @jetstream-backend-team
