@@ -1,0 +1,399 @@
+openapi: 3.0.0
+
+info:
+  title: JetStream API
+  version: 1.0.0
+  description: |
+    API documentation for FlyUSA's JetStream aircraft tracking and trip management platform.
+    Provides real-time aircraft tracking, trip management, and service coordination capabilities.
+  contact:
+    name: FlyUSA Development Team
+    email: dev@flyusa.com
+
+servers:
+  - url: /api/v1
+    description: API version 1
+
+security:
+  - oauth2: []
+
+components:
+  securitySchemes:
+    oauth2:
+      type: oauth2
+      flows:
+        authorizationCode:
+          authorizationUrl: https://flyusa.b2clogin.com/authorize
+          tokenUrl: https://flyusa.b2clogin.com/token
+          scopes:
+            read:trips: Read trip information
+            write:trips: Create and update trips
+            read:aircraft: View aircraft information
+            write:aircraft: Update aircraft information
+            read:positions: View aircraft positions
+            write:positions: Update aircraft positions
+
+  schemas:
+    Error:
+      type: object
+      properties:
+        code:
+          type: string
+          enum:
+            - UNAUTHORIZED
+            - FORBIDDEN
+            - NOT_FOUND
+            - VALIDATION_ERROR
+            - RATE_LIMIT_EXCEEDED
+        message:
+          type: string
+        details:
+          type: object
+
+    Position:
+      type: object
+      required:
+        - aircraftId
+        - latitude
+        - longitude
+        - altitude
+        - groundSpeed
+        - heading
+        - recorded
+      properties:
+        id:
+          type: string
+          format: uuid
+        aircraftId:
+          type: string
+          format: uuid
+        latitude:
+          type: number
+          format: float
+          minimum: -90
+          maximum: 90
+        longitude:
+          type: number
+          format: float
+          minimum: -180
+          maximum: 180
+        altitude:
+          type: number
+          format: float
+          description: Altitude in feet MSL
+        groundSpeed:
+          type: number
+          format: float
+          description: Ground speed in knots
+        heading:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 359
+          description: True heading in degrees
+        recorded:
+          type: string
+          format: date-time
+
+    Aircraft:
+      type: object
+      required:
+        - registration
+        - type
+        - category
+        - operator
+        - status
+        - isActive
+      properties:
+        id:
+          type: string
+          format: uuid
+        registration:
+          type: string
+          description: Aircraft tail registration number
+        type:
+          type: string
+          description: Aircraft type/model designation
+        category:
+          type: string
+          enum:
+            - LIGHT_JET
+            - MIDSIZE_JET
+            - HEAVY_JET
+        operator:
+          type: string
+          description: Operating company or entity
+        status:
+          type: string
+          enum:
+            - ACTIVE
+            - INACTIVE
+            - MAINTENANCE
+        isActive:
+          type: boolean
+
+    Trip:
+      type: object
+      required:
+        - aircraftId
+        - startTime
+        - endTime
+        - status
+      properties:
+        id:
+          type: string
+          format: uuid
+        aircraftId:
+          type: string
+          format: uuid
+        startTime:
+          type: string
+          format: date-time
+        endTime:
+          type: string
+          format: date-time
+        status:
+          type: string
+          enum:
+            - SCHEDULED
+            - IN_POSITION
+            - BOARDING
+            - DEPARTED
+            - ENROUTE
+            - ARRIVED
+            - COMPLETED
+            - CANCELLED
+        metadata:
+          type: object
+        milestones:
+          type: array
+          items:
+            $ref: '#/components/schemas/Milestone'
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        lastUpdatedBy:
+          type: string
+          format: uuid
+
+    Milestone:
+      type: object
+      required:
+        - tripId
+        - type
+        - timestamp
+        - userId
+        - userRole
+      properties:
+        id:
+          type: string
+          format: uuid
+        tripId:
+          type: string
+          format: uuid
+        type:
+          type: string
+          enum:
+            - STATUS_UPDATE
+            - POSITION_UPDATE
+            - CREW_UPDATE
+            - PASSENGER_UPDATE
+            - SERVICE_UPDATE
+            - SCHEDULE_UPDATE
+        timestamp:
+          type: string
+          format: date-time
+        details:
+          type: object
+        userId:
+          type: string
+          format: uuid
+        userRole:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+
+paths:
+  /aircraft:
+    get:
+      summary: List all aircraft
+      description: Retrieve a list of all aircraft in the fleet
+      tags:
+        - Aircraft
+      security:
+        - oauth2: [read:aircraft]
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum:
+              - ACTIVE
+              - INACTIVE
+              - MAINTENANCE
+        - name: category
+          in: query
+          schema:
+            type: string
+            enum:
+              - LIGHT_JET
+              - MIDSIZE_JET
+              - HEAVY_JET
+      responses:
+        '200':
+          description: List of aircraft
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Aircraft'
+        '429':
+          $ref: '#/components/responses/RateLimitExceeded'
+      x-rateLimit:
+        requests: 100
+        period: 60
+
+  /aircraft/{id}/position:
+    post:
+      summary: Update aircraft position
+      description: Update the current position of an aircraft with ADS-B data
+      tags:
+        - Aircraft Tracking
+      security:
+        - oauth2: [write:positions]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Position'
+      responses:
+        '200':
+          description: Position updated successfully
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimitExceeded'
+      x-rateLimit:
+        requests: 300
+        period: 60
+
+  /trips:
+    post:
+      summary: Create new trip
+      description: Create a new trip with aircraft assignment and schedule
+      tags:
+        - Trip Management
+      security:
+        - oauth2: [write:trips]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Trip'
+      responses:
+        '201':
+          description: Trip created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Trip'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/RateLimitExceeded'
+      x-rateLimit:
+        requests: 50
+        period: 60
+
+  /trips/{id}/status:
+    patch:
+      summary: Update trip status
+      description: Update the status of an existing trip
+      tags:
+        - Trip Management
+      security:
+        - oauth2: [write:trips]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - status
+                - lastUpdatedBy
+              properties:
+                status:
+                  type: string
+                  enum:
+                    - SCHEDULED
+                    - IN_POSITION
+                    - BOARDING
+                    - DEPARTED
+                    - ENROUTE
+                    - ARRIVED
+                    - COMPLETED
+                    - CANCELLED
+                metadata:
+                  type: object
+                lastUpdatedBy:
+                  type: string
+                  format: uuid
+      responses:
+        '200':
+          description: Trip status updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Trip'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimitExceeded'
+      x-rateLimit:
+        requests: 100
+        period: 60
+
+components:
+  responses:
+    NotFound:
+      description: The specified resource was not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    ValidationError:
+      description: The request payload failed validation
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    RateLimitExceeded:
+      description: Rate limit exceeded
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
