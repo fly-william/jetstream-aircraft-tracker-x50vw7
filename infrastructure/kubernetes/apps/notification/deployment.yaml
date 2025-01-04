@@ -1,0 +1,143 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: notification-service
+  namespace: jetstream-notification
+  labels:
+    app: notification-service
+    component: backend
+    part-of: jetstream
+    app.kubernetes.io/name: notification-service
+    app.kubernetes.io/part-of: jetstream
+    app.kubernetes.io/component: notification
+    app.kubernetes.io/version: 1.0.0
+  annotations:
+    sidecar.istio.io/inject: "true"
+    security.policy/scan-status: "approved"
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "9090"
+spec:
+  replicas: 3
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: notification-service
+  template:
+    metadata:
+      labels:
+        app: notification-service
+        component: backend
+        part-of: jetstream
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "3000"
+        prometheus.io/path: "/metrics"
+        metrics.insights/enabled: "true"
+        metrics.insights/path: "/metrics/detailed"
+    spec:
+      serviceAccountName: notification-service
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 2000
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+      - name: notification-service
+        image: jetstream/notification-service:latest
+        imagePullPolicy: Always
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+            - ALL
+        ports:
+        - containerPort: 3000
+          name: http
+        - containerPort: 9090
+          name: metrics
+        env:
+        - name: NODE_ENV
+          value: "production"
+        - name: TEAMS_API_TIMEOUT
+          value: "5000"
+        - name: TEAMS_API_RETRY_COUNT
+          value: "3"
+        - name: TEAMS_API_VERSION
+          value: "v1.0"
+        envFrom:
+        - configMapRef:
+            name: jetstream-config
+        resources:
+          requests:
+            cpu: "200m"
+            memory: "256Mi"
+          limits:
+            cpu: "500m"
+            memory: "512Mi"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: http
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: http
+          initialDelaySeconds: 15
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 2
+        startupProbe:
+          httpGet:
+            path: /health
+            port: http
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          failureThreshold: 30
+        volumeMounts:
+        - name: config
+          mountPath: /app/config
+          readOnly: true
+        - name: tmp
+          mountPath: /tmp
+        - name: teams-certs
+          mountPath: /app/certs
+          readOnly: true
+      volumes:
+      - name: config
+        configMap:
+          name: jetstream-config
+      - name: tmp
+        emptyDir: {}
+      - name: teams-certs
+        secret:
+          secretName: teams-api-certs
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                  - notification-service
+              topologyKey: kubernetes.io/hostname
+      topologySpreadConstraints:
+      - maxSkew: 1
+        topologyKey: topology.kubernetes.io/zone
+        whenUnsatisfied: ScheduleAnyway
+        labelSelector:
+          matchLabels:
+            app: notification-service
+      terminationGracePeriodSeconds: 60
