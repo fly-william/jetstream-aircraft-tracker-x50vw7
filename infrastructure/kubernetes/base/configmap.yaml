@@ -1,0 +1,158 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: jetstream-config
+  labels:
+    app: jetstream
+    component: config
+data:
+  database.json: |
+    {
+      "main": {
+        "type": "postgres",
+        "synchronize": false,
+        "logging": true,
+        "pool": {
+          "max": 20,
+          "min": 5,
+          "idleTimeout": 30000,
+          "acquireTimeout": 20000,
+          "retryAttempts": 3,
+          "retryDelay": 3000
+        },
+        "replication": {
+          "readReplicas": 2,
+          "selector": "RANDOM"
+        }
+      },
+      "timeseries": {
+        "type": "postgres",
+        "synchronize": false,
+        "logging": true,
+        "pool": {
+          "max": 30,
+          "min": 10,
+          "idleTimeout": 20000,
+          "acquireTimeout": 15000,
+          "retryAttempts": 3,
+          "retryDelay": 2000
+        },
+        "chunks": {
+          "timeInterval": "1 day",
+          "compression": true
+        }
+      }
+    }
+  redis.json: |
+    {
+      "cluster": {
+        "enableReadReplicas": true,
+        "maxRedirections": 16,
+        "retryStrategy": {
+          "retries": 3,
+          "delay": 1000
+        },
+        "readFrom": "REPLICA_PREFERRED"
+      },
+      "cache": {
+        "ttl": {
+          "POSITION_DATA": 300,
+          "TRIP_DATA": 600,
+          "USER_SESSION": 1800,
+          "AIRCRAFT_STATUS": 120,
+          "WEATHER_DATA": 900
+        },
+        "maxMemoryPolicy": "allkeys-lru",
+        "maxMemoryBytes": 1073741824
+      }
+    }
+  api.json: |
+    {
+      "cors": {
+        "allowedOrigins": ["*"],
+        "allowedMethods": ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+        "allowedHeaders": ["Content-Type", "Authorization", "X-Requested-With", "Accept"],
+        "exposedHeaders": ["Content-Range", "X-Content-Range"],
+        "maxAge": 86400,
+        "credentials": true
+      },
+      "rateLimit": {
+        "windowMs": 900000,
+        "max": 100,
+        "standardHeaders": true,
+        "legacyHeaders": false,
+        "skipSuccessfulRequests": false
+      },
+      "security": {
+        "helmet": {
+          "contentSecurityPolicy": true,
+          "crossOriginEmbedderPolicy": true,
+          "crossOriginOpenerPolicy": true
+        }
+      }
+    }
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: jetstream-tracking-config
+  labels:
+    app: jetstream
+    component: tracking
+data:
+  adsb.json: |
+    {
+      "updateInterval": 5,
+      "positionRetention": "90d",
+      "batchSize": 100,
+      "validation": {
+        "minAltitude": 0,
+        "maxAltitude": 60000,
+        "speedThreshold": 1000,
+        "positionAccuracy": 2
+      },
+      "processing": {
+        "smoothing": true,
+        "interpolation": true,
+        "predictionWindow": 30
+      }
+    }
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: jetstream-trip-config
+  labels:
+    app: jetstream
+    component: trip
+data:
+  trip.json: |
+    {
+      "milestoneTypes": [
+        "SCHEDULED",
+        "CREW_ASSIGNED",
+        "IN_POSITION",
+        "PASSENGER_NOTIFICATION",
+        "BOARDING",
+        "DEPARTED",
+        "EN_ROUTE",
+        "APPROACHING",
+        "ARRIVED",
+        "COMPLETED"
+      ],
+      "autoNotify": true,
+      "notifications": {
+        "channels": ["TEAMS", "EMAIL", "SMS"],
+        "templates": {
+          "status_change": "trip_status_template",
+          "delay": "trip_delay_template",
+          "service_request": "service_request_template"
+        }
+      },
+      "serviceRequests": {
+        "types": ["CATERING", "GROUND_TRANSPORT", "CLEANING", "FUEL"],
+        "autoAssignment": true,
+        "priorityLevels": ["LOW", "MEDIUM", "HIGH", "URGENT"]
+      }
+    }
