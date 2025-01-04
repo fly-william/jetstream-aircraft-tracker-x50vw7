@@ -1,0 +1,106 @@
+# Prometheus Recording Rules Configuration v2.45.0
+# JetStream Platform Metrics Aggregation and Pre-computation
+
+groups:
+- name: api_latency_rules
+  rules:
+  # API P95 Latency Recording Rule
+  - record: api:request_latency:p95
+    expr: histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket[5m])) by (le, service, endpoint))
+    labels:
+      metric_type: latency
+      aggregation: p95
+      sla_threshold: 200ms
+
+  # API P99 Latency Recording Rule
+  - record: api:request_latency:p99
+    expr: histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket[5m])) by (le, service, endpoint))
+    labels:
+      metric_type: latency
+      aggregation: p99
+      sla_threshold: 500ms
+
+  # Real-time Aircraft Position Tracking Latency
+  - record: api:tracking_latency:realtime
+    expr: histogram_quantile(0.95, sum(rate(aircraft_position_update_seconds_bucket[1m])) by (le, aircraft_id))
+    labels:
+      metric_type: latency
+      aggregation: realtime
+      sla_threshold: 5s
+
+- name: service_availability_rules
+  rules:
+  # Service Success Rate Recording Rule
+  - record: service:availability:ratio
+    expr: sum(rate(http_requests_total{code=~"2..|3.."}[5m])) by (service) / sum(rate(http_requests_total[5m])) by (service)
+    labels:
+      metric_type: availability
+      aggregation: ratio
+      sla_threshold: "99.9"
+
+  # Service Uptime Recording Rule
+  - record: service:uptime:ratio
+    expr: avg_over_time(up[1h]) by (service, instance)
+    labels:
+      metric_type: uptime
+      aggregation: hourly
+      sla_threshold: "99.9"
+
+  # Aircraft Tracking Service Availability
+  - record: service:tracking:availability
+    expr: sum(up{job="aircraft-tracking"}) / count(up{job="aircraft-tracking"})
+    labels:
+      metric_type: availability
+      aggregation: realtime
+      sla_threshold: "99.95"
+
+- name: error_rate_rules
+  rules:
+  # Service Error Rate Recording Rule
+  - record: service:error_rate:ratio
+    expr: sum(rate(http_requests_total{code=~"5.."}[5m])) by (service) / sum(rate(http_requests_total[5m])) by (service)
+    labels:
+      metric_type: errors
+      aggregation: ratio
+      sla_threshold: "0.001"
+
+  # Service Error Count Recording Rule
+  - record: service:error_count:total
+    expr: sum(increase(http_requests_total{code=~"5.."}[1h])) by (service, code)
+    labels:
+      metric_type: errors
+      aggregation: hourly
+
+  # Aircraft Position Tracking Error Rate
+  - record: tracking:error_rate:ratio
+    expr: sum(rate(aircraft_position_errors_total[5m])) / sum(rate(aircraft_position_updates_total[5m]))
+    labels:
+      metric_type: errors
+      aggregation: realtime
+      sla_threshold: "0.0001"
+
+- name: resource_utilization_rules
+  rules:
+  # Container Memory Usage Recording Rule
+  - record: container:memory_usage:percent
+    expr: sum(container_memory_usage_bytes) by (container, pod, namespace) / sum(container_spec_memory_limit_bytes) by (container, pod, namespace) * 100
+    labels:
+      metric_type: resource
+      resource: memory
+      threshold: "85"
+
+  # Container CPU Usage Recording Rule
+  - record: container:cpu_usage:percent
+    expr: sum(rate(container_cpu_usage_seconds_total[5m])) by (container, pod, namespace) / sum(container_spec_cpu_quota) by (container, pod, namespace) * 100
+    labels:
+      metric_type: resource
+      resource: cpu
+      threshold: "80"
+
+  # Aircraft Position Tracking Processing Capacity
+  - record: tracking:processing_capacity:percent
+    expr: sum(rate(aircraft_position_updates_total[5m])) / sum(tracking_service_capacity_total) * 100
+    labels:
+      metric_type: resource
+      resource: processing
+      threshold: "75"
