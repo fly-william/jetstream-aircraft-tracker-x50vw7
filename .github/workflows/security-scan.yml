@@ -1,0 +1,160 @@
+name: Security Scan
+
+on:
+  workflow_run:
+    workflows: ['Backend CI', 'Web CI']
+    types: [completed]
+    branches: ['main', 'develop']
+  schedule:
+    - cron: '0 0 * * *'  # Daily at midnight UTC
+  workflow_dispatch:  # Manual trigger
+
+env:
+  SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+jobs:
+  dependency-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Snyk Backend Scan
+        uses: snyk/actions@0.4.0
+        with:
+          command: test
+          args: >-
+            --severity-threshold=high
+            --all-projects
+            --json-file-output=backend-vulns.json
+          working-directory: src/backend
+        continue-on-error: false
+
+      - name: Snyk Frontend Scan
+        uses: snyk/actions@0.4.0
+        with:
+          command: test
+          args: >-
+            --severity-threshold=high
+            --all-projects
+            --json-file-output=frontend-vulns.json
+          working-directory: src/web
+        continue-on-error: false
+
+      - name: Upload Scan Results
+        uses: actions/upload-artifact@v3
+        with:
+          name: dependency-scan-results
+          path: |
+            backend-vulns.json
+            frontend-vulns.json
+          retention-days: 90
+
+  code-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v2
+        with:
+          languages: javascript,typescript
+          queries: security-extended,security-and-quality
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v2
+        with:
+          category: "/language:javascript,typescript"
+          output: sarif-results
+
+      - name: Upload SARIF Results
+        uses: actions/upload-artifact@v3
+        with:
+          name: codeql-results
+          path: sarif-results
+          retention-days: 90
+
+  container-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Backend Container Scan
+        uses: aquasecurity/trivy-action@0.11.2
+        with:
+          scan-type: fs
+          scan-ref: src/backend
+          format: 'json'
+          output: 'backend-trivy.json'
+          exit-code: '1'
+          ignore-unfixed: true
+          severity: 'CRITICAL,HIGH'
+          timeout: '10m'
+
+      - name: Frontend Container Scan
+        uses: aquasecurity/trivy-action@0.11.2
+        with:
+          scan-type: fs
+          scan-ref: src/web
+          format: 'json'
+          output: 'frontend-trivy.json'
+          exit-code: '1'
+          ignore-unfixed: true
+          severity: 'CRITICAL,HIGH'
+          timeout: '10m'
+
+      - name: Upload Container Scan Results
+        uses: actions/upload-artifact@v3
+        with:
+          name: container-scan-results
+          path: |
+            backend-trivy.json
+            frontend-trivy.json
+          retention-days: 90
+
+  compliance-report:
+    needs: [dependency-scan, code-scan, container-scan]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download All Scan Results
+        uses: actions/download-artifact@v3
+        with:
+          path: scan-results
+
+      - name: Generate Compliance Report
+        run: |
+          echo "Security Scan Compliance Report" > compliance-report.txt
+          echo "Generated: $(date -u)" >> compliance-report.txt
+          echo "----------------------------------------" >> compliance-report.txt
+          
+          echo "Dependency Vulnerabilities:" >> compliance-report.txt
+          cat scan-results/dependency-scan-results/*.json | jq -r '.vulnerabilities | length' >> compliance-report.txt
+          
+          echo "Code Analysis Issues:" >> compliance-report.txt
+          cat scan-results/codeql-results/*.sarif | jq -r '.runs[].results | length' >> compliance-report.txt
+          
+          echo "Container Security Issues:" >> compliance-report.txt
+          cat scan-results/container-scan-results/*.json | jq -r '.Results[] | .Vulnerabilities | length' >> compliance-report.txt
+
+      - name: Upload Compliance Report
+        uses: actions/upload-artifact@v3
+        with:
+          name: compliance-report
+          path: compliance-report.txt
+          retention-days: 90
+
+      - name: Notify on Critical Issues
+        if: failure()
+        uses: actions/github-script@v6
+        with:
+          script: |
+            github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: 'Critical Security Issues Detected',
+              body: 'Security scan has detected critical issues. Please review the compliance report.',
+              labels: ['security', 'critical']
+            })
